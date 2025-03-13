@@ -3,7 +3,7 @@
 # image if you decide to add additional stages later.
 
 # Build stage
-FROM node:20-alpine AS build
+FROM node:20.18.3-alpine3.20 AS build
 WORKDIR /app
 
 # Do before installing dependencies to leverage Docker’s caching
@@ -35,6 +35,7 @@ CMD ["nginx", "-g", "daemon off;"]
 # Equivalent to /target folder in Maven java build
 
 # By default, Nginx runs as a daemon (background process)
+
 # daemon off tells Nginx to run in the foreground instead
 # Running Nginx in the foreground ensures proper container lifecycle management
 # Makes it easier to view logs and debug issues
