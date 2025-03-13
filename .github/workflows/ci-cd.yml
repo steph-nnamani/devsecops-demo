@@ -55,14 +55,16 @@ jobs:
       
       - name: Run ESLint
         #run: npm run lint
-        run: npm run lint -- -f yaml -o ./eslint-results.yaml # yaml file format output result
+        # Available built-in formats: compact, unix, visualstudio, json, json-with-metadata, 
+        # stylish (default), tap, or junit
+        run: npm run lint -- -f stylish -o ./eslint-results.txt
       
       - name: Upload lint results
         if: always()  # This ensures results are uploaded even if linting fails
         uses: actions/upload-artifact@v4
         with:
           name: eslint-results
-          path: eslint-results.json
+          path: eslint-results.txt
         
 
   build:
