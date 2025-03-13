@@ -4,6 +4,7 @@
 
 # Build stage
 FROM node:23-alpine3.21 AS build
+RUN apk update && apk upgrade libxml2
 WORKDIR /app
 
 # Do before installing dependencies to leverage Docker’s caching
