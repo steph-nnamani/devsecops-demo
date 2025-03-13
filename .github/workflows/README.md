@@ -46,3 +46,41 @@ kubectl apply -f kubernetes/deployment.yaml
 ```
 
 Or set up a webhook to trigger the deployment when the manifest is updated.-
+
+## CI/CD Best practices
+--------------------
+Keeping them separate (as you currently have) is better because:
+===============================================================
+# Clear Responsibility
+
+    Each job has a single, clear purpose
+
+    Easier to debug when issues occur
+
+    Clearer logs and results
+
+# Parallel Execution
+
+    Tests and linting run simultaneously
+
+    Faster overall workflow completion
+
+    Your current setup allows both jobs to run at the same time
+
+# Independent Results
+
+    If tests fail, you still get lint results
+
+    If linting fails, you still get test results
+
+    Separate artifacts for each type of check
+
+# Better Pull Request Feedback
+
+    Separate status checks in GitHub
+
+    Clear indication of what exactly failed
+
+    More granular control over required checks
+
+The current setup with separate jobs is following best practices for CI/CD workflows.
