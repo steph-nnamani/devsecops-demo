@@ -33,3 +33,8 @@ CMD ["nginx", "-g", "daemon off;"]
 # Nginx’s default document root /usr/share/nginx/html.
 # The /dist folder stores the output of the build process
 # Equivalent to /target folder in Maven java build
+
+# By default, Nginx runs as a daemon (background process)
+# daemon off tells Nginx to run in the foreground instead
+# Running Nginx in the foreground ensures proper container lifecycle management
+# Makes it easier to view logs and debug issues
