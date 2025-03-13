@@ -3,7 +3,7 @@
 # image if you decide to add additional stages later.
 
 # Build stage
-FROM node:20.18.3-alpine3.20 AS build
+FROM node:23-alpine3.21 AS build
 WORKDIR /app
 
 # Do before installing dependencies to leverage Docker’s caching
