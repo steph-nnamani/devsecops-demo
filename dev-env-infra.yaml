@@ -1,0 +1,99 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: EC2 instance deployment template
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair
+    # provide the actual key pair name through the --parameter-overrides flag.
+  InstanceType:
+    Type: String
+    Default: t2.medium
+    Description: EC2 instance type
+
+Resources:
+  NnamaniEc2Instance:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: ami-04b4f1a9cf54c11d0
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - sg-0e7d59c64e67835f0
+      SubnetId: subnet-0da6f88481b09e310
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda    # Root volume
+          Ebs:
+            VolumeSize: 10         # Increased to 10 GB
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: my-ec2-instance
+      UserData: !Base64 |
+        #!/bin/bash
+        # Install Docker
+        sudo apt update
+        sudo apt install docker.io -y
+        sudo systemctl start docker
+        sudo systemctl enable docker
+        sudo usermod -aG docker ubuntu
+
+        # Install Kind
+        [ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
+        chmod +x ./kind
+        sudo mv ./kind /usr/local/bin/kind
+
+        # Install kubectl
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+        # Create kind cluster with proper configuration
+        cat > /tmp/kind-config.yaml << 'KINDCONFIG'
+        kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        nodes:
+        - role: control-plane
+          extraPortMappings:
+          - containerPort: 80
+            hostPort: 80
+            protocol: TCP
+          - containerPort: 443
+            hostPort: 443
+            protocol: TCP
+        KINDCONFIG
+
+        # Start kind cluster with proper permissions
+        sudo -u ubuntu bash -c '
+          newgrp docker << "ENDSCRIPT"
+          kind create cluster --name=devsecops-demo-cluster --config /tmp/kind-config.yaml
+          
+          # Wait for cluster to be ready
+          echo "Waiting for cluster to be ready..."
+          kubectl wait --for=condition=Ready nodes --all --timeout=300s
+          
+          # Configure kubectl
+          mkdir -p $HOME/.kube
+          kind get kubeconfig --name=devsecops-demo-cluster > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+          
+          # Install ArgoCD
+          kubectl create namespace argocd
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          
+          # Wait for ArgoCD pods to be ready
+          echo "Waiting for ArgoCD pods to be ready..."
+          kubectl wait --namespace argocd \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/name=argocd-server \
+            --timeout=300s
+        ENDSCRIPT
+        '
+
+        # Add kubectl config to ubuntu user's home
+        sudo mkdir -p /home/ubuntu/.kube
+        sudo cp /root/.kube/config /home/ubuntu/.kube/
+        sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube
